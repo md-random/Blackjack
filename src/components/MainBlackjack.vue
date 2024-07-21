@@ -16,7 +16,7 @@
     <div v-else>
       <p>Player Money: ${{ playerMoney }}</p>
       <p>Current Bet: ${{ currentBet }}</p>
-      <div v-if="!handInProgress || gameOver">
+      <div v-if="!handInProgress && !playerBroke">
         <p>Place your bet ($1 - ${{ playerMoney }})</p>
         <input
           v-model.number="betAmount"
@@ -27,12 +27,22 @@
         <button @click="placeBet">Place Bet</button>
       </div>
       <template v-if="splitHands.length === 0">
-        <Hand :cards="playerHand" player="Player" />
+        <Hand
+          :cards="playerHand"
+          player="Player"
+          :isActive="playerTurn"
+          :isWinner="winner === 'player'"
+        />
         <p>Player Score: {{ calculateHandValue(playerHand) }}</p>
       </template>
       <template v-else>
         <div v-for="(hand, index) in splitHands" :key="index">
-          <Hand :cards="hand" :player="`Player Hand ${index + 1}`" />
+          <Hand
+            :cards="hand"
+            :player="`Player Hand ${index + 1}`"
+            :isActive="playerTurn && currentHand === index"
+            :isWinner="winner === 'player'"
+          />
           <p>
             Player Hand {{ index + 1 }} Score: {{ calculateHandValue(hand) }}
           </p>
@@ -41,8 +51,15 @@
           </p>
         </div>
       </template>
-      <Hand :cards="visibleDealerHand" player="Dealer" />
-      <p>Dealer Score: {{ dealerVisibleScore }}</p>
+      <Hand
+        :cards="visibleDealerHand"
+        player="Dealer"
+        :isActive="!playerTurn"
+        :isWinner="winner === 'dealer'"
+      />
+      <p v-if="!playerTurn || gameOver">
+        Dealer Score: {{ dealerVisibleScore }}
+      </p>
       <p>{{ message }}</p>
       <p>Cards left in deck: {{ deck.length }}</p>
       <button @click="hit" :disabled="!canHit">Hit</button>
@@ -50,7 +67,7 @@
       <button @click="double" :disabled="!canDouble">Double</button>
       <button @click="split" :disabled="!canSplit">Split</button>
 
-      <!-- New section to display wins/losses -->
+      <!-- Display wins/losses -->
       <div v-if="gameOver" class="result">
         <p v-if="playerWinnings > 0" class="win">
           Player wins ${{ playerWinnings }}
@@ -59,6 +76,12 @@
           Player loses ${{ -playerWinnings }}
         </p>
         <p v-else>It's a tie!</p>
+      </div>
+
+      <!-- Display message and button if player is broke -->
+      <div v-if="playerBroke" class="result">
+        <p class="loss">You are broke!</p>
+        <button @click="resetGame">Restart Game</button>
       </div>
     </div>
   </div>
@@ -79,10 +102,8 @@ const dealerHand = ref<Card[]>([])
 const message = ref('')
 const gameOver = ref(false)
 const playerTurn = ref(true)
-const canSplit = ref(false)
 const splitHands = ref<Card[][]>([])
 const currentHand = ref(0)
-const dealerCheckedForBlackjack = ref(false)
 const gameStarted = ref(false)
 const numberOfDecks = ref(1)
 const playerMoney = ref(1000)
@@ -90,6 +111,8 @@ const currentBet = ref(0)
 const betAmount = ref(10)
 const handInProgress = ref(false)
 const playerWinnings = ref(0)
+const playerBroke = ref(false)
+const winner = ref<'player' | 'dealer' | 'tie' | null>(null)
 
 const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
 const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
@@ -135,15 +158,19 @@ const startGame = () => {
 }
 
 const placeBet = () => {
+  if (playerMoney.value <= 0) {
+    playerBroke.value = true
+    return
+  }
   if (betAmount.value < 1 || betAmount.value > playerMoney.value) {
     alert(`Please enter a bet between $1 and $${playerMoney.value}.`)
     return
   }
   currentBet.value = betAmount.value
   playerMoney.value -= currentBet.value
-  handInProgress.value = true
-  gameOver.value = false
   playerWinnings.value = 0 // Reset winnings for new hand
+  handInProgress.value = true
+  winner.value = null // Reset the winner
   dealInitialHands()
 }
 
@@ -152,7 +179,6 @@ const dealInitialHands = () => {
   dealerHand.value = []
   splitHands.value = []
   currentHand.value = 0
-  dealerCheckedForBlackjack.value = false
   message.value = ''
   gameOver.value = false
   playerTurn.value = true
@@ -162,46 +188,28 @@ const dealInitialHands = () => {
   dealCard(playerHand.value)
   dealCard(dealerHand.value)
 
-  updateActions()
+  const dealerScore = calculateHandValue(dealerHand.value)
+  const playerScore = calculateHandValue(playerHand.value)
 
-  if (isDealerBlackjack()) {
+  if (dealerScore === 21 && playerScore === 21) {
+    message.value = "Both Dealer and Player have Blackjack! It's a push."
+    playerMoney.value += currentBet.value // Return the bet
+    playerWinnings.value = 0
+    winner.value = 'tie'
+    endGame()
+  } else if (dealerScore === 21) {
     message.value = 'Dealer has Blackjack! Dealer wins.'
+    playerWinnings.value = -currentBet.value
+    winner.value = 'dealer'
     endGame()
-  } else if (calculateHandValue(playerHand.value) === 21) {
+  } else if (playerScore === 21) {
     message.value = 'Player has Blackjack!'
-    playerMoney.value += Math.floor(currentBet.value * 2.5)
+    const blackjackPayout = Math.floor(currentBet.value * 1.5)
+    playerMoney.value += currentBet.value + blackjackPayout
+    playerWinnings.value = blackjackPayout
+    winner.value = 'player'
     endGame()
   }
-}
-
-const isDealerBlackjack = () => {
-  if (dealerHand.value.length < 2) return false
-
-  const dealerFirstCard = dealerHand.value[0]
-  const dealerSecondCard = dealerHand.value[1]
-  const dealerFirstCardValue =
-    dealerFirstCard.rank === 'A'
-      ? 11
-      : ['K', 'Q', 'J', '10'].includes(dealerFirstCard.rank)
-      ? 10
-      : parseInt(dealerFirstCard.rank)
-  const dealerSecondCardValue =
-    dealerSecondCard.rank === 'A'
-      ? 11
-      : ['K', 'Q', 'J', '10'].includes(dealerSecondCard.rank)
-      ? 10
-      : parseInt(dealerSecondCard.rank)
-
-  if (
-    dealerFirstCard.rank === 'A' ||
-    ['K', 'Q', 'J', '10'].includes(dealerFirstCard.rank)
-  ) {
-    if (dealerFirstCardValue + dealerSecondCardValue === 21) {
-      dealerCheckedForBlackjack.value = true
-      return true
-    }
-  }
-  return false
 }
 
 const hit = () => {
@@ -214,18 +222,19 @@ const hit = () => {
     const playerScore = calculateHandValue(currentPlayerHand)
 
     if (playerScore > 21) {
+      message.value = `Hand ${currentHand.value + 1} busts!`
       if (
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
       ) {
-        message.value = `Hand ${currentHand.value + 1} busts!`
         nextHand()
       } else {
-        message.value =
-          splitHands.value.length > 0
-            ? 'All hands bust! Dealer wins.'
-            : 'Player busts! Dealer wins.'
-        endGame()
+        playerWinnings.value -= currentBet.value
+        if (splitHands.value.length > 0) {
+          nextHand()
+        } else {
+          endGame()
+        }
       }
     } else if (playerScore === 21) {
       if (
@@ -238,7 +247,6 @@ const hit = () => {
         stand()
       }
     }
-    updateActions()
   }
 }
 
@@ -287,13 +295,12 @@ const double = () => {
 
 const split = () => {
   if (canSplit.value) {
-    playerMoney.value -= currentBet.value
+    playerMoney.value -= currentBet.value // Deduct the additional bet
     splitHands.value = [[playerHand.value[0]], [playerHand.value[1]]]
     currentHand.value = 0
     dealCard(splitHands.value[0])
     dealCard(splitHands.value[1])
     playerHand.value = splitHands.value[0]
-    updateActions()
   } else {
     alert('Cannot split!')
   }
@@ -302,7 +309,6 @@ const split = () => {
 const nextHand = () => {
   currentHand.value++
   playerHand.value = splitHands.value[currentHand.value]
-  updateActions()
 }
 
 const compareHands = (
@@ -316,40 +322,55 @@ const compareHands = (
   if (playerScore > 21) {
     message.value += `${handMsg}Player busts. Dealer wins. `
     winAmount = -currentBet.value
+    winner.value = 'dealer'
   } else if (dealerScore > 21) {
     message.value += `${handMsg}Dealer busts! Player wins. `
     winAmount = currentBet.value
+    winner.value = 'player'
   } else if (dealerScore > playerScore) {
     message.value += `${handMsg}Dealer wins! `
     winAmount = -currentBet.value
+    winner.value = 'dealer'
   } else if (dealerScore < playerScore) {
     message.value += `${handMsg}Player wins! `
     winAmount = currentBet.value
+    winner.value = 'player'
   } else {
     message.value += `${handMsg}It's a tie! `
-    winAmount = 0
+    winAmount = 0 // No change in money for a tie
+    winner.value = 'tie'
   }
 
-  playerMoney.value += winAmount + currentBet.value
   playerWinnings.value += winAmount
-}
-
-const updateActions = () => {
-  const currentPlayerHand =
-    splitHands.value.length > 0
-      ? splitHands.value[currentHand.value]
-      : playerHand.value
-  canSplit.value =
-    currentPlayerHand.length === 2 &&
-    currentPlayerHand[0].rank === currentPlayerHand[1].rank &&
-    splitHands.value.length === 0 &&
-    playerMoney.value >= currentBet.value
+  playerMoney.value += winAmount
 }
 
 const endGame = () => {
   gameOver.value = true
   playerTurn.value = false
   handInProgress.value = false
+  if (playerMoney.value <= 0) {
+    playerBroke.value = true
+  }
+}
+
+const resetGame = () => {
+  gameStarted.value = false
+  playerMoney.value = 1000
+  currentBet.value = 0
+  betAmount.value = 10
+  playerWinnings.value = 0
+  playerBroke.value = false
+  gameOver.value = false
+  handInProgress.value = false
+  message.value = ''
+  playerHand.value = []
+  dealerHand.value = []
+  splitHands.value = []
+  currentHand.value = 0
+  playerTurn.value = true
+  winner.value = null // Reset the winner
+  initializeDeck()
 }
 
 const calculateHandValue = (hand: Card[]) => {
@@ -375,7 +396,12 @@ const calculateHandValue = (hand: Card[]) => {
 }
 
 const visibleDealerHand = computed(() => {
-  if (!playerTurn.value || gameOver.value || dealerCheckedForBlackjack.value) {
+  if (
+    !playerTurn.value ||
+    gameOver.value ||
+    calculateHandValue(dealerHand.value) === 21 ||
+    calculateHandValue(playerHand.value) === 21
+  ) {
     return dealerHand.value
   }
   return dealerHand.value.slice(0, 1)
@@ -383,7 +409,12 @@ const visibleDealerHand = computed(() => {
 
 const dealerVisibleScore = computed(() => {
   if (!dealerHand.value || dealerHand.value.length === 0) return 0
-  if (!playerTurn.value || gameOver.value || dealerCheckedForBlackjack.value) {
+  if (
+    !playerTurn.value ||
+    gameOver.value ||
+    calculateHandValue(dealerHand.value) === 21 ||
+    calculateHandValue(playerHand.value) === 21
+  ) {
     return calculateHandValue(dealerHand.value)
   }
   return calculateHandValue([dealerHand.value[0]])
@@ -405,5 +436,19 @@ const canDouble = computed(() => {
       ? splitHands.value[currentHand.value]
       : playerHand.value
   return currentPlayerHand.length === 2 && playerMoney.value >= currentBet.value
+})
+
+const canSplit = computed(() => {
+  if (!playerTurn.value || gameOver.value) return false
+  const currentPlayerHand =
+    splitHands.value.length > 0
+      ? splitHands.value[currentHand.value]
+      : playerHand.value
+  return (
+    currentPlayerHand.length === 2 &&
+    currentPlayerHand[0].rank === currentPlayerHand[1].rank &&
+    splitHands.value.length === 0 &&
+    playerMoney.value >= currentBet.value
+  )
 })
 </script>
