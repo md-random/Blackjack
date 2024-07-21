@@ -70,12 +70,21 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - Refined betting system
 - Improved dealer AI
 
-### Version 2.3 (Current)
+### Version 2.3
 
 - Added game setup options for number of decks and starting bankroll
 - Improved positioning of the count info box
 - Enhanced responsiveness for various screen sizes
 - Bug fixes and code optimization
+
+### Version 2.4 (Current)
+
+- Fixed handling of Blackjacks (natural 21) after splitting hands
+- Improved payout logic for split hands
+- Enhanced game flow for split hands
+- Added more detailed messaging for split hand outcomes
+- Fixed bug where players could double down on a 21 after splitting
+- Improved overall accuracy to standard Blackjack rules
 
 ## How to Use
 

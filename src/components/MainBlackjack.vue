@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 2.3</div>
+    <div class="version">Version 2.4</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
@@ -117,6 +117,16 @@
           <p>Cards left in deck: {{ deck.length }}</p>
           <p>Running Count: {{ runningCount }}</p>
           <p>True Count: {{ trueCount }}</p>
+          <div class="aggression-meter">
+            <p>Play Style: {{ aggressionMeter }}</p>
+            <div class="meter">
+              <div
+                class="meter-bar"
+                :class="aggressionMeter.toLowerCase()"
+                :style="{ width: `${(trueCount + 2) * 20}%` }"
+              ></div>
+            </div>
+          </div>
         </div>
       </template>
     </div>
@@ -225,6 +235,12 @@ const startGame = () => {
   initializeDeck()
 }
 
+const aggressionMeter = computed(() => {
+  if (trueCount.value <= -2) return 'Aggressive'
+  if (trueCount.value >= 1) return 'Conservative'
+  return 'Neutral'
+})
+
 const placeBet = () => {
   if (playerMoney.value <= 0) {
     playerBroke.value = true
@@ -295,8 +311,17 @@ const hit = () => {
     dealCard(currentPlayerHand)
     const playerScore = calculateHandValue(currentPlayerHand)
 
-    if (playerScore > 21) {
-      message.value = `Hand ${currentHand.value + 1} busts!`
+    if (
+      splitHands.value.length > 0 &&
+      checkForBlackjackAfterSplit(currentPlayerHand)
+    ) {
+      if (currentHand.value < splitHands.value.length - 1) {
+        nextHand()
+      } else {
+        stand()
+      }
+    } else if (playerScore > 21) {
+      message.value = `Hand ${currentHand.value + 1} busts! `
       if (
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
@@ -315,7 +340,7 @@ const hit = () => {
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
       ) {
-        message.value = `Hand ${currentHand.value + 1} has 21!`
+        message.value = `Hand ${currentHand.value + 1} has 21! `
         nextHand()
       } else {
         stand()
@@ -379,6 +404,17 @@ const split = () => {
   } else {
     alert('Cannot split!')
   }
+}
+
+const checkForBlackjackAfterSplit = (hand: Card[]) => {
+  if (hand.length === 2 && calculateHandValue(hand) === 21) {
+    message.value += `Hand ${currentHand.value + 1} has Blackjack! `
+    const blackjackPayout = Math.floor(currentBet.value * 1.5)
+    playerMoney.value += currentBet.value + blackjackPayout
+    playerWinnings.value += blackjackPayout
+    return true
+  }
+  return false
 }
 
 const nextHand = () => {
@@ -657,6 +693,35 @@ initializeDeck()
 
 .count-info p {
   margin: 5px 0;
+}
+
+.aggression-meter {
+  margin-top: 10px;
+}
+
+.meter {
+  width: 100%;
+  height: 20px;
+  background-color: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.meter-bar {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+}
+
+.meter-bar.aggressive {
+  background-color: #e74c3c;
+}
+
+.meter-bar.neutral {
+  background-color: #f1c40f;
+}
+
+.meter-bar.conservative {
+  background-color: #2ecc71;
 }
 
 /* Media Queries for Responsiveness */
