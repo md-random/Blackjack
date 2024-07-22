@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 2.4</div>
+    <div class="version">Version 3.0</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
@@ -30,58 +30,87 @@
       </div>
 
       <template v-else>
-        <!-- Box 1: Game Info and Betting -->
-        <div class="box game-info">
-          <h1>Blackjack</h1>
-          <p>Player Money: ${{ playerMoney }}</p>
-          <p>Current Bet: ${{ currentBet }}</p>
-          <div v-if="!handInProgress && !playerBroke">
-            <p>Place your bet ($1 - ${{ playerMoney }})</p>
-            <input
-              v-model.number="betAmount"
-              type="number"
-              :min="1"
-              :max="playerMoney"
-            />
-            <button @click="placeBet">Place Bet</button>
+        <div class="top-row">
+          <!-- Box 5: Count Info -->
+          <div class="box count-info">
+            <p>Cards left in deck: {{ deck.length }}</p>
+            <p>Running Count: {{ runningCount }}</p>
+            <p>True Count: {{ trueCount }}</p>
+            <div class="aggression-meter">
+              <p>Play Style: {{ aggressionMeter }}</p>
+              <div class="meter">
+                <div
+                  class="meter-bar"
+                  :class="aggressionMeter.toLowerCase()"
+                  :style="{ width: `${(trueCount + 2) * 20}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Box 1: Game Info and Betting -->
+          <div class="box game-info">
+            <h1>Blackjack</h1>
+            <p>Player Money: ${{ playerMoney }}</p>
+            <p>Current Bet: ${{ currentBet }}</p>
+            <div v-if="!handInProgress && !playerBroke">
+              <p>Place your bet ($1 - ${{ playerMoney }})</p>
+              <input
+                v-model.number="betAmount"
+                type="number"
+                :min="1"
+                :max="playerMoney"
+              />
+              <button @click="placeBet">Place Bet</button>
+            </div>
+          </div>
+
+          <!-- Box 6: Hand Log -->
+          <div class="box hand-log">
+            <h2>Hand Log</h2>
+            <ul>
+              <li v-for="(log, index) in handLog" :key="index">{{ log }}</li>
+            </ul>
           </div>
         </div>
 
-        <!-- Box 2: Player's Hand -->
-        <div class="box player-hand">
-          <template v-if="splitHands.length === 0">
-            <Hand
-              :cards="playerHand"
-              :player="`Player's Hand: ${playerScore}`"
-              :isActive="playerTurn"
-              :isWinner="winner === 'player'"
-            />
-          </template>
-          <template v-else>
-            <div v-for="(hand, index) in splitHands" :key="index">
+        <div class="middle-row">
+          <!-- Box 2: Player's Hand -->
+          <div class="box player-hand">
+            <template v-if="splitHands.length === 0">
               <Hand
-                :cards="hand"
-                :player="`Player's Hand ${index + 1}: ${calculateHandValue(
-                  hand
-                )}`"
-                :isActive="playerTurn && currentHand === index"
+                :cards="playerHand"
+                :player="`Player's Hand: ${playerScore}`"
+                :isActive="playerTurn"
                 :isWinner="winner === 'player'"
               />
-              <p v-if="index === currentHand && !gameOver">
-                Currently playing this hand
-              </p>
-            </div>
-          </template>
-        </div>
+            </template>
+            <template v-else>
+              <div v-for="(hand, index) in splitHands" :key="index">
+                <Hand
+                  :cards="hand"
+                  :player="`Player's Hand ${index + 1}: ${calculateHandValue(
+                    hand
+                  )}`"
+                  :isActive="playerTurn && currentHand === index"
+                  :isWinner="winner === 'player'"
+                />
+                <p v-if="index === currentHand && !gameOver">
+                  Currently playing this hand
+                </p>
+              </div>
+            </template>
+          </div>
 
-        <!-- Box 3: Dealer's Hand -->
-        <div class="box dealer-hand">
-          <Hand
-            :cards="visibleDealerHand"
-            :player="`Dealer's Hand: ${dealerVisibleScore}`"
-            :isActive="!playerTurn"
-            :isWinner="winner === 'dealer'"
-          />
+          <!-- Box 3: Dealer's Hand -->
+          <div class="box dealer-hand">
+            <Hand
+              :cards="visibleDealerHand"
+              :player="`Dealer's Hand: ${dealerVisibleScore}`"
+              :isActive="!playerTurn"
+              :isWinner="winner === 'dealer'"
+            />
+          </div>
         </div>
 
         <!-- Box 4: Game Actions and Messages -->
@@ -109,23 +138,6 @@
           <div v-if="playerBroke" class="result">
             <p class="loss">You are broke!</p>
             <button @click="resetGame">Restart Game</button>
-          </div>
-        </div>
-
-        <!-- Box 5: Count Info -->
-        <div class="count-info">
-          <p>Cards left in deck: {{ deck.length }}</p>
-          <p>Running Count: {{ runningCount }}</p>
-          <p>True Count: {{ trueCount }}</p>
-          <div class="aggression-meter">
-            <p>Play Style: {{ aggressionMeter }}</p>
-            <div class="meter">
-              <div
-                class="meter-bar"
-                :class="aggressionMeter.toLowerCase()"
-                :style="{ width: `${(trueCount + 2) * 20}%` }"
-              ></div>
-            </div>
           </div>
         </div>
       </template>
@@ -162,11 +174,19 @@ const playerWinnings = ref(0)
 const playerBroke = ref(false)
 const winner = ref<'player' | 'dealer' | 'tie' | null>(null)
 const runningCount = ref(0)
+const handLog = ref<string[]>([])
+
 const trueCount = computed(() => {
   const decksRemaining = Math.ceil(deck.value.length / 52)
   return decksRemaining
     ? Math.round((runningCount.value / decksRemaining) * 100) / 100
     : 0
+})
+
+const aggressionMeter = computed(() => {
+  if (trueCount.value <= -2) return 'Aggressive'
+  if (trueCount.value >= 1) return 'Conservative'
+  return 'Neutral'
 })
 
 const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
@@ -182,7 +202,7 @@ const initializeDeck = () => {
     }
   }
   shuffleDeck()
-  runningCount.value = 0 // Reset running count when deck is initialized
+  runningCount.value = 0
 }
 
 const shuffleDeck = () => {
@@ -235,11 +255,26 @@ const startGame = () => {
   initializeDeck()
 }
 
-const aggressionMeter = computed(() => {
-  if (trueCount.value <= -2) return 'Aggressive'
-  if (trueCount.value >= 1) return 'Conservative'
-  return 'Neutral'
-})
+const updateHandLog = (
+  bet: number,
+  playerHand: string,
+  playerSc: number,
+  dealerHand: string,
+  dealerSc: number,
+  result: string,
+  bankroll: number
+) => {
+  const resultText =
+    result === 'Player wins'
+      ? 'Player wins'
+      : result === 'Player loses'
+      ? 'Player loses'
+      : 'Tie'
+  const displayBet = currentBet.value > bet ? bet * 2 : bet // Display doubled bet if applicable
+  handLog.value.push(
+    `Bet: $${displayBet} | Player: ${playerHand} | PlScore: ${playerSc} | Dealer: ${dealerHand} | DeScore: ${dealerSc} | ${resultText} | Bankroll: $${bankroll}`
+  )
+}
 
 const placeBet = () => {
   if (playerMoney.value <= 0) {
@@ -252,9 +287,9 @@ const placeBet = () => {
   }
   currentBet.value = betAmount.value
   playerMoney.value -= currentBet.value
-  playerWinnings.value = 0 // Reset winnings for new hand
+  playerWinnings.value = 0
   handInProgress.value = true
-  winner.value = null // Reset the winner
+  winner.value = null
   dealInitialHands()
 }
 
@@ -271,9 +306,9 @@ const dealInitialHands = () => {
   dealCard(playerHand.value)
   dealCard(dealerHand.value)
   dealCard(playerHand.value)
-  dealCard(dealerHand.value, true) // Deal hidden card to dealer
+  dealCard(dealerHand.value, true)
 
-  dealerHiddenCard.value = dealerHand.value.pop() // Remove the hidden card from the dealer's hand
+  dealerHiddenCard.value = dealerHand.value.pop()
 
   const dealerScore = calculateHandValue(dealerHand.value)
   const playerScore = calculateHandValue(playerHand.value)
@@ -281,14 +316,15 @@ const dealInitialHands = () => {
   if (dealerScore === 21 && playerScore === 21) {
     revealDealerHiddenCard()
     message.value = "Both Dealer and Player have Blackjack! It's a push."
-    playerMoney.value += currentBet.value // Return the bet
+    playerMoney.value += currentBet.value
+
     playerWinnings.value = 0
     winner.value = 'tie'
     endGame()
   } else if (dealerScore === 21) {
     revealDealerHiddenCard()
     message.value = 'Dealer has Blackjack! Dealer wins.'
-    playerWinnings.value = -currentBet.value
+    playerWinnings.value -= currentBet.value
     winner.value = 'dealer'
     endGame()
   } else if (playerScore === 21) {
@@ -296,7 +332,7 @@ const dealInitialHands = () => {
     message.value = 'Player has Blackjack!'
     const blackjackPayout = Math.floor(currentBet.value * 1.5)
     playerMoney.value += currentBet.value + blackjackPayout
-    playerWinnings.value = currentBet.value + blackjackPayout
+    playerWinnings.value = Number(currentBet.value) + blackjackPayout
     winner.value = 'player'
     endGame()
   }
@@ -310,7 +346,6 @@ const hit = () => {
         : playerHand.value
     dealCard(currentPlayerHand)
     const playerScore = calculateHandValue(currentPlayerHand)
-
     if (
       splitHands.value.length > 0 &&
       checkForBlackjackAfterSplit(currentPlayerHand)
@@ -321,7 +356,7 @@ const hit = () => {
         stand()
       }
     } else if (playerScore > 21) {
-      message.value = `Hand ${currentHand.value + 1} busts! `
+      message.value = `Hand ${currentHand.value + 1} busts!`
       if (
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
@@ -330,8 +365,10 @@ const hit = () => {
       } else {
         playerWinnings.value -= currentBet.value
         if (splitHands.value.length > 0) {
+          console.log('7')
           nextHand()
         } else {
+          console.log('8')
           endGame()
         }
       }
@@ -340,9 +377,11 @@ const hit = () => {
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
       ) {
-        message.value = `Hand ${currentHand.value + 1} has 21! `
+        console.log('9')
+        message.value = `Hand ${currentHand.value + 1} has 21!`
         nextHand()
       } else {
+        console.log('10')
         stand()
       }
     }
@@ -382,8 +421,10 @@ const dealerTurn = () => {
 
 const double = () => {
   if (canDouble.value) {
-    playerMoney.value -= currentBet.value
-    currentBet.value *= 2
+    playerMoney.value -= currentBet.value // Deduct the additional bet
+    console.log('double // playerMoney.value ', playerMoney.value)
+    currentBet.value *= 2 // Double the current bet
+    console.log('double // Double the current bet', currentBet.value)
     hit()
     if (!gameOver.value) {
       stand()
@@ -395,7 +436,7 @@ const double = () => {
 
 const split = () => {
   if (canSplit.value) {
-    playerMoney.value -= currentBet.value // Deduct the additional bet
+    playerMoney.value -= currentBet.value
     splitHands.value = [[playerHand.value[0]], [playerHand.value[1]]]
     currentHand.value = 0
     dealCard(splitHands.value[0])
@@ -406,54 +447,59 @@ const split = () => {
   }
 }
 
-const checkForBlackjackAfterSplit = (hand: Card[]) => {
-  if (hand.length === 2 && calculateHandValue(hand) === 21) {
-    message.value += `Hand ${currentHand.value + 1} has Blackjack! `
-    const blackjackPayout = Math.floor(currentBet.value * 1.5)
-    playerMoney.value += currentBet.value + blackjackPayout
-    playerWinnings.value += blackjackPayout
-    return true
-  }
-  return false
-}
-
 const nextHand = () => {
   currentHand.value++
   playerHand.value = splitHands.value[currentHand.value]
 }
 
-const compareHands = (
-  playerScore: number,
-  dealerScore: number,
-  handNumber?: number
-) => {
-  const handMsg = handNumber ? `Hand ${handNumber}: ` : ''
+const compareHands = (playerScore: number, dealerScore: number) => {
+  let result = ''
   let winAmount = 0
-
+  console.log('currentBet.value', currentBet.value)
+  const originalBet = currentBet.value // Store the original bet amount
+  console.log('originalBet', originalBet)
   if (playerScore > 21) {
-    message.value += `${handMsg}Player busts. Dealer wins. `
-    winAmount = -currentBet.value
-    winner.value = 'dealer'
+    result = 'Player loses'
+    winAmount -= currentBet.value
   } else if (dealerScore > 21) {
-    message.value += `${handMsg}Dealer busts! Player wins. `
-    winAmount = currentBet.value
-    winner.value = 'player'
+    console.log('Player wins dealer Bust')
+    result = 'Player wins'
+    winAmount += currentBet.value * 2
   } else if (dealerScore > playerScore) {
-    message.value += `${handMsg}Dealer wins! `
-    winAmount = -currentBet.value
-    winner.value = 'dealer'
+    result = 'Player loses'
+    //winAmount -= currentBet.value
   } else if (dealerScore < playerScore) {
-    message.value += `${handMsg}Player wins! `
-    winAmount = currentBet.value
-    winner.value = 'player'
+    console.log('Player wins Draw')
+    result = 'Player wins'
+    winAmount += currentBet.value * 2
   } else {
-    message.value += `${handMsg}It's a tie! `
-    winAmount = 0 // No change in money for a tie
-    winner.value = 'tie'
+    console.log('Tie')
+    result = 'Tie'
+    winAmount += currentBet.value
   }
 
-  playerWinnings.value += winAmount
   playerMoney.value += winAmount
+
+  const playerHandString = playerHand.value
+    .map((card) => `${card.rank}${card.suit[0]}`)
+    .join(' ')
+  const dealerHandString = dealerHand.value
+    .concat(dealerHiddenCard.value ? [dealerHiddenCard.value] : [])
+    .map((card) => `${card.rank}${card.suit[0]}`)
+    .join(' ')
+
+  updateHandLog(
+    originalBet, // Use the original bet amount for logging
+    playerHandString,
+    playerScore,
+    dealerHandString,
+    dealerScore,
+    result,
+    Number(playerMoney.value)
+  )
+
+  playerWinnings.value = winAmount
+  endGame()
 }
 
 const endGame = () => {
@@ -481,7 +527,8 @@ const resetGame = () => {
   splitHands.value = []
   currentHand.value = 0
   playerTurn.value = true
-  winner.value = null // Reset the winner
+  winner.value = null
+  handLog.value = []
   initializeDeck()
 }
 
@@ -505,6 +552,17 @@ const calculateHandValue = (hand: Card[]) => {
     aces--
   }
   return value
+}
+
+const checkForBlackjackAfterSplit = (hand: Card[]) => {
+  if (hand.length === 2 && calculateHandValue(hand) === 21) {
+    message.value += `Hand ${currentHand.value + 1} has Blackjack! `
+    const blackjackPayout = Math.floor(currentBet.value * 1.5)
+    playerMoney.value += currentBet.value + blackjackPayout
+    playerWinnings.value += blackjackPayout
+    return true
+  }
+  return false
 }
 
 const visibleDealerHand = computed(() => {
@@ -610,37 +668,51 @@ initializeDeck()
 .game-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   width: 100%;
   height: 100%;
-  position: relative;
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.middle-row {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin: 20px 0;
 }
 
 .box {
   padding: 20px;
-  margin: 10px 0;
-  width: 90%;
-  max-width: 600px;
+  margin: 10px;
+  border-radius: 10px;
 }
 
-.game-info {
-  text-align: center;
+.count-info,
+.game-info,
+.hand-log {
+  flex: 1;
+  max-width: 30%;
 }
 
 .player-hand,
 .dealer-hand {
-  width: 100%;
+  flex: 1;
   display: flex;
   justify-content: center;
 }
 
 .game-actions {
+  width: 100%;
   text-align: center;
 }
 
 .action-buttons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
@@ -648,7 +720,6 @@ initializeDeck()
 .action-buttons button {
   padding: 10px 20px;
   font-size: 16px;
-  flex: 1 1 45%;
   margin: 5px;
   background-color: #3498db;
   color: white;
@@ -680,29 +751,85 @@ initializeDeck()
   color: #e74c3c;
 }
 
-.count-info {
-  position: absolute;
-  top: -30px;
-  left: 0;
-  text-align: left;
-  font-size: 24px;
-  font-weight: bold;
-  padding: 10px;
-  z-index: 10;
+.hand-log {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
-.count-info p {
-  margin: 5px 0;
+.hand-log ul {
+  list-style-type: none;
+  padding: 0;
 }
 
-.aggression-meter {
-  margin-top: 10px;
+.hand-log li {
+  margin-bottom: 5px;
+}
+
+@media (max-width: 1024px) {
+  .top-row,
+  .middle-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .count-info,
+  .game-info,
+  .hand-log {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 576px) {
+  .box {
+    padding: 10px;
+  }
+
+  .action-buttons button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+.game-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.game-setup h2 {
+  margin-bottom: 20px;
+}
+
+.game-setup div {
+  margin-bottom: 10px;
+}
+
+.game-setup input {
+  margin-left: 10px;
+}
+
+.game-setup button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.game-setup button:hover {
+  background-color: #2980b9;
 }
 
 .meter {
   width: 100%;
   height: 20px;
-  background-color: #ddd;
+  background-color: #e0e0e0;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -722,66 +849,5 @@ initializeDeck()
 
 .meter-bar.conservative {
   background-color: #2ecc71;
-}
-
-/* Media Queries for Responsiveness */
-@media (min-width: 768px) {
-  .game-container {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-around;
-  }
-
-  .game-info {
-    width: 100%;
-    max-width: 600px;
-  }
-
-  .player-hand,
-  .dealer-hand {
-    width: 45%;
-  }
-
-  .game-actions {
-    width: 100%;
-    max-width: 600px;
-  }
-
-  .count-info {
-    top: 60px;
-    left: 80px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .blackjack {
-    max-width: 1200px;
-  }
-
-  .box {
-    width: 45%;
-  }
-
-  .game-info,
-  .game-actions {
-    width: 100%;
-    max-width: none;
-  }
-}
-
-/* Adjustments for smaller screens */
-@media (max-width: 576px) {
-  .box {
-    padding: 10px;
-  }
-
-  .action-buttons button {
-    padding: 8px 16px;
-    font-size: 14px;
-  }
-
-  .count-info {
-    font-size: 18px;
-  }
 }
 </style>
