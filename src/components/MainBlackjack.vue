@@ -33,11 +33,14 @@
         <div class="top-row">
           <!-- Box 5: Count Info -->
           <div class="box count-info">
-            <p>Cards left in deck: {{ deck.length }}</p>
-            <p>Running Count: {{ runningCount }}</p>
-            <p>True Count: {{ trueCount }}</p>
-            <div class="aggression-meter">
+            <div class="count-info-text">
+              <p>Cards left in deck: {{ deck.length }}</p>
+              <p>Running Count: {{ runningCount }}</p>
+              <p>True Count: {{ trueCount }}</p>
               <p>Play Style: {{ aggressionMeter }}</p>
+            </div>
+
+            <div class="aggression-meter">
               <div class="meter">
                 <div
                   class="meter-bar"
@@ -365,10 +368,8 @@ const hit = () => {
       } else {
         playerWinnings.value -= currentBet.value
         if (splitHands.value.length > 0) {
-          console.log('7')
           nextHand()
         } else {
-          console.log('8')
           endGame()
         }
       }
@@ -377,11 +378,9 @@ const hit = () => {
         splitHands.value.length > 0 &&
         currentHand.value < splitHands.value.length - 1
       ) {
-        console.log('9')
         message.value = `Hand ${currentHand.value + 1} has 21!`
         nextHand()
       } else {
-        console.log('10')
         stand()
       }
     }
@@ -422,9 +421,7 @@ const dealerTurn = () => {
 const double = () => {
   if (canDouble.value) {
     playerMoney.value -= currentBet.value // Deduct the additional bet
-    console.log('double // playerMoney.value ', playerMoney.value)
     currentBet.value *= 2 // Double the current bet
-    console.log('double // Double the current bet', currentBet.value)
     hit()
     if (!gameOver.value) {
       stand()
@@ -690,6 +687,9 @@ initializeDeck()
   margin: 10px;
   border-radius: 10px;
 }
+.count-info {
+  text-align: start;
+}
 
 .count-info,
 .game-info,
@@ -778,6 +778,11 @@ initializeDeck()
   .hand-log {
     max-width: 90%;
   }
+}
+
+.count-info-text {
+  font-size: 18px;
+  padding: 40px;
 }
 
 @media (max-width: 576px) {
