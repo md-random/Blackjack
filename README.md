@@ -40,6 +40,7 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - 3.1: Improved dealer blackjack detection and logging
 - 3.2: Created separate HandLog and CardCounting components
 - 3.3: Enhanced error handling for split hands and improved win/loss reporting in hand log
+- 3.4: Betting Input set to minimum 0.50 increments
 
 ## How to Use
 

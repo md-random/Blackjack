@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 3.3</div>
+    <div class="version">Version 3.4</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
