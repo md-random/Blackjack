@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 3.2</div>
+    <div class="version">Version 3.3</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
@@ -33,11 +33,11 @@
         <div class="top-row">
           <!-- Box 5: Count Info -->
           <div class="box count-info">
-            <div class="count-info-text">
-              <p>Cards left in deck: {{ deck.length }}</p>
-              <p>Running Count: {{ runningCount }}</p>
-              <p>True Count: {{ trueCount }}</p>
-              <p>Play Style: {{ aggressionMeter }}</p>
+            <div>
+              <CardCounting
+                :cardsLeft="deck.length"
+                :runningCount="runningCount"
+              />
             </div>
 
             <div class="aggression-meter">
@@ -148,6 +148,7 @@
 import { ref, computed } from 'vue'
 import Hand from './children/Hand.vue'
 import HandLog from './children/HandLog.vue'
+import CardCounting from './children/CardCounting.vue'
 
 // TODO: need to check if dealer has 21 after player check. if both have 21 it should be a push / tie
 
@@ -163,7 +164,7 @@ interface Card {
 const deck = ref<Card[]>([])
 const playerHand = ref<Card[]>([])
 const dealerHand = ref<Card[]>([])
-const dealerHiddenCard = ref<Card | null>(null)
+const dealerHiddenCard = ref<Card | null | undefined>(null)
 const message = ref('')
 const gameOver = ref(false)
 const playerTurn = ref(true)
@@ -274,14 +275,13 @@ const updateHandLog = (
   dealerHand: string,
   dealerSc: number,
   result: string,
-  bankroll: number
+  bankroll: number,
+  winAmount: number
 ) => {
   const resultText =
-    result === 'Player wins'
-      ? 'Player wins'
-      : result === 'Player loses'
-      ? 'Player loses'
-      : 'Tie'
+    result === 'Tie'
+      ? 'Tie'
+      : `Player ${result} $${Math.abs(winAmount).toFixed(2)}`
   const displayBet = currentBet.value > bet ? bet * 2 : bet // Display doubled bet if applicable
   handLog.value.push(
     `Bet: $${displayBet} | Player: ${playerHand} | PlScore: ${playerSc} | Dealer: ${dealerHand} | DeScore: ${dealerSc} | ${resultText} | Bankroll: $${bankroll}`
@@ -329,7 +329,7 @@ const dealInitialHands = () => {
   if (['A', '10', 'J', 'Q', 'K'].includes(dealerVisibleCard.rank)) {
     const dealerScore = calculateHandValue([
       ...dealerHand.value,
-      dealerHiddenCard.value,
+      ...(dealerHiddenCard.value ? [dealerHiddenCard.value] : []),
     ])
     if (dealerScore === 21) {
       revealDealerHiddenCard()
@@ -514,27 +514,23 @@ const compareHands = (
 ) => {
   let result = ''
   let winAmount = 0
-  console.log('currentBet.value', currentBet.value)
   const originalBet = currentBet.value // Store the original bet amount
-  console.log('originalBet', originalBet)
+
   if (playerScore > 21) {
-    result = 'Player loses'
+    result = 'loses'
     winAmount -= currentBet.value
   } else if (dealerScore > 21) {
-    console.log('Player wins dealer Bust')
-    result = 'Player wins'
-    winAmount += currentBet.value * 2
-  } else if (dealerScore > playerScore) {
-    result = 'Player loses'
-    //winAmount -= currentBet.value
-  } else if (dealerScore < playerScore) {
-    console.log('Player wins Draw')
-    result = 'Player wins'
-    winAmount += currentBet.value * 2
-  } else {
-    console.log('Tie')
-    result = 'Tie'
+    result = 'wins'
     winAmount += currentBet.value
+  } else if (dealerScore > playerScore) {
+    result = 'loses'
+    winAmount -= currentBet.value
+  } else if (dealerScore < playerScore) {
+    result = 'wins'
+    winAmount += currentBet.value
+  } else {
+    result = 'Tie'
+    winAmount = 0
   }
 
   playerMoney.value += winAmount
@@ -542,7 +538,7 @@ const compareHands = (
   const playerHandString =
     handIndex !== undefined
       ? splitHands.value[handIndex]
-          .map((card) => `${card.rank}${card.suit[0]}`)
+          ?.map((card) => `${card.rank}${card.suit[0]}`)
           .join(' ')
       : playerHand.value.map((card) => `${card.rank}${card.suit[0]}`).join(' ')
   const dealerHandString = dealerHand.value
@@ -552,12 +548,13 @@ const compareHands = (
 
   updateHandLog(
     originalBet,
-    [playerHandString],
-    [playerScore],
+    playerHandString,
+    playerScore,
     dealerHandString,
     dealerScore,
     result,
-    Number(playerMoney.value)
+    Number(playerMoney.value),
+    winAmount
   )
 
   playerWinnings.value += winAmount
@@ -754,15 +751,12 @@ initializeDeck()
   margin: 10px;
   border-radius: 10px;
 }
-.count-info {
-  text-align: start;
-}
 
 .count-info,
 .game-info,
 .hand-log {
   flex: 1;
-  max-width: 30%;
+  max-width: 40%;
 }
 
 .player-hand,
@@ -896,30 +890,5 @@ initializeDeck()
 
 .game-setup button:hover {
   background-color: #2980b9;
-}
-
-.meter {
-  width: 100%;
-  height: 20px;
-  background-color: #e0e0e0;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.meter-bar {
-  height: 100%;
-  transition: width 0.5s ease-in-out;
-}
-
-.meter-bar.aggressive {
-  background-color: #e74c3c;
-}
-
-.meter-bar.neutral {
-  background-color: #f1c40f;
-}
-
-.meter-bar.conservative {
-  background-color: #2ecc71;
 }
 </style>
