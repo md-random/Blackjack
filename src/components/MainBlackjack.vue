@@ -57,12 +57,14 @@
             <p>Player Money: ${{ playerMoney }}</p>
             <p>Current Bet: ${{ currentBet }}</p>
             <div v-if="!handInProgress && !playerBroke">
-              <p>Place your bet ($1 - ${{ playerMoney }})</p>
+              <p>Place your bet ($0.50 - ${{ playerMoney }})</p>
               <input
                 v-model.number="betAmount"
                 type="number"
-                :min="1"
+                :min="0.5"
                 :max="playerMoney"
+                step="0.50"
+                @input="validateBet"
               />
               <button @click="placeBet">Place Bet</button>
             </div>
@@ -145,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUpdated, Ref, nextTick } from 'vue'
 import Hand from './children/Hand.vue'
 import HandLog from './children/HandLog.vue'
 import CardCounting from './children/CardCounting.vue'
@@ -293,16 +295,31 @@ const placeBet = () => {
     playerBroke.value = true
     return
   }
-  if (betAmount.value < 1 || betAmount.value > playerMoney.value) {
-    alert(`Please enter a bet between $1 and $${playerMoney.value}.`)
+
+  validateBet()
+
+  if (betAmount.value < 0.5 || betAmount.value > playerMoney.value) {
+    alert(
+      `Please enter a bet between $0.50 and $${playerMoney.value}, in increments of $0.50.`
+    )
     return
   }
+
   currentBet.value = betAmount.value
   playerMoney.value -= currentBet.value
   playerWinnings.value = 0
   handInProgress.value = true
   winner.value = null
   dealInitialHands()
+}
+
+const validateBet = () => {
+  const bet = betAmount.value
+  const isValid =
+    bet >= 0.5 && bet <= playerMoney.value && (bet * 100) % 50 === 0
+  if (!isValid) {
+    betAmount.value = Math.floor(bet * 2) / 2 // Reset to the nearest valid value
+  }
 }
 
 const dealInitialHands = () => {
