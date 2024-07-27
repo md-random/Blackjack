@@ -23,6 +23,7 @@ const props = defineProps({
   max-height: 300px;
   overflow-y: auto;
   background-color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
 }
 
 .hand-log ul {
