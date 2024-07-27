@@ -34,13 +34,43 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - 2.5: Added player statistics tracking
 - 2.6: Introduced basic achievement system
 
-## Version 3.0 - 3.3
+## Version 3.0 - 3.5
 
 - 3.0: Refactored to component-based architecture
 - 3.1: Improved dealer blackjack detection and logging
 - 3.2: Created separate HandLog and CardCounting components
 - 3.3: Enhanced error handling for split hands and improved win/loss reporting in hand log
 - 3.4: Betting Input set to minimum 0.50 increments
+- 3.5: Refactored bankroll management, enhanced hand logging with hand numbers, and improved code maintainability
+
+## Logic and Function Explanations
+
+### Core Game Functions
+
+1. `winLoss(result, bet)`: Centralizes bankroll adjustments for wins, losses, ties, and blackjacks.
+2. `updateHandLog(...)`: Logs each hand's details, including a new hand number for easier tracking.
+3. `dealInitialHands()`: Handles the initial deal of cards and checks for blackjacks.
+4. `hit()`: Allows the player to take another card.
+5. `stand()`: Ends the player's turn and initiates the dealer's turn.
+6. `double()`: Doubles the player's bet and deals one more card.
+7. `split()`: Splits a pair into two separate hands.
+8. `checkForBlackjackAfterSplit(hand)`: Checks for blackjack in split hands.
+9. `compareHands(playerScore, dealerScore, handIndex)`: Compares player and dealer hands to determine the winner.
+
+### Helper Functions
+
+1. `calculateHandValue(hand)`: Calculates the value of a hand, accounting for Aces.
+2. `dealCard(hand, isDealerHidden)`: Deals a card from the deck to a hand.
+3. `shuffleDeck()`: Shuffles the deck of cards.
+4. `updateRunningCount(card)`: Updates the running count based on the dealt card.
+5. `revealDealerHiddenCard()`: Reveals the dealer's hidden card.
+
+### Game Flow Functions
+
+1. `startGame()`: Initializes the game with user-defined settings.
+2. `placeBet()`: Handles the betting process before each hand.
+3. `endGame()`: Concludes the current hand and prepares for the next.
+4. `resetGame()`: Resets the game to its initial state.
 
 ## How to Use
 
