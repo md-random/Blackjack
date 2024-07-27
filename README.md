@@ -13,78 +13,33 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - Split, Double Down, Hit, and Stand actions
 - Realistic game logic including Blackjack payouts
 
-## Version History
+# Blackjack Project Version History
 
-### Version 1.0
+## Version 1.0 - 1.5
 
-- Initial implementation of the Blackjack game
-- Basic game logic for player and dealer turns
-- Simple UI with card display
+- 1.0: Initial release with basic Blackjack gameplay
+- 1.1: Added simple betting system
+- 1.2: Implemented dealer AI and basic hand evaluation
+- 1.3: Introduced card counting feature (running count)
+- 1.4: Added true count calculation
+- 1.5: Implemented basic hand log
 
-### Version 1.1
+## Version 2.0 - 2.6
 
-- Added basic betting functionality
-- Implemented win/loss detection
-- Improved hand value calculation
+- 2.0: Major refactor for improved code structure
+- 2.1: Enhanced betting system with minimum and maximum limits
+- 2.2: Added split functionality
+- 2.3: Implemented double down option
+- 2.4: Improved hand log with more detailed information
+- 2.5: Added player statistics tracking
+- 2.6: Introduced basic achievement system
 
-### Version 1.2
+## Version 3.0 - 3.3
 
-- Introduced a simple AI for the dealer's actions
-- Added game over state and restart option
-- Improved error handling for invalid bets
-
-### Version 1.3
-
-- Implemented basic responsive design
-- Added visual indicators for active player
-- Improved code structure and component organization
-
-### Version 1.4
-
-- Introduced TypeScript for improved type safety
-- Refactored game logic for better maintainability
-- Added basic animations for card dealing
-
-### Version 1.5
-
-- Implemented persistent bankroll across game sessions
-- Added option to adjust bet size
-- Improved UI with better button placement and readability
-
-### Version 2.0
-
-- Added card counting functionality
-- Implemented Running Count and True Count display
-- Improved game logic and error handling
-
-### Version 2.1
-
-- Enhanced responsive design
-- Improved UI for better user experience
-- Bug fixes and performance improvements
-
-### Version 2.2
-
-- Added split functionality
-- Implemented double down option
-- Refined betting system
-- Improved dealer AI
-
-### Version 2.3
-
-- Added game setup options for number of decks and starting bankroll
-- Improved positioning of the count info box
-- Enhanced responsiveness for various screen sizes
-- Bug fixes and code optimization
-
-### Version 2.4 (Current)
-
-- Fixed handling of Blackjacks (natural 21) after splitting hands
-- Improved payout logic for split hands
-- Enhanced game flow for split hands
-- Added more detailed messaging for split hand outcomes
-- Fixed bug where players could double down on a 21 after splitting
-- Improved overall accuracy to standard Blackjack rules
+- 3.0: Refactored to component-based architecture
+- 3.1: Improved dealer blackjack detection and logging
+- 3.2: Created separate HandLog and CardCounting components
+- 3.3: Enhanced error handling for split hands and improved win/loss reporting in hand log
 
 ## How to Use
 
