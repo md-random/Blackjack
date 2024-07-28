@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 3.5</div>
+    <div class="version">Version 3.6</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
@@ -72,7 +72,11 @@
 
           <!-- Box 6: Hand Log -->
           <!-- Box 6: Hand Log -->
-          <HandLog :logs="handLog" />
+          <HandLog
+            ref="handLogRef"
+            @logUpdated="onLogUpdated"
+            @logReset="onLogReset"
+          />
         </div>
 
         <div class="middle-row">
@@ -152,12 +156,6 @@ import Hand from './children/Hand.vue'
 import HandLog from './children/HandLog.vue'
 import CardCounting from './children/CardCounting.vue'
 
-// TODO: need to check if dealer has 21 after player check. if both have 21 it should be a push / tie
-
-// TODO: fix hand log report for split hands
-
-// TODO: fix aggression meter
-
 interface Card {
   suit: string
   rank: string
@@ -184,6 +182,7 @@ const playerBroke = ref(false)
 const winner = ref<'player' | 'dealer' | 'tie' | null>(null)
 const runningCount = ref(0)
 const handLog = ref<string[]>([])
+const handLogRef = ref<InstanceType<typeof HandLog> | null>(null)
 const handNumber = ref(0)
 
 const trueCount = computed(() => {
@@ -271,25 +270,14 @@ const startGame = () => {
   initializeDeck()
 }
 
-const updateHandLog = (
-  bet: number,
-  playerHand: string,
-  playerSc: number,
-  dealerHand: string,
-  dealerSc: number,
-  result: string,
-  bankroll: number,
-  winAmount: number
-) => {
-  handNumber.value++
-  const resultText =
-    result === 'Tie'
-      ? 'Tie'
-      : `Player ${result} $${Math.abs(winAmount).toFixed(2)}`
-  const displayBet = currentBet.value > bet ? bet * 2 : bet // Display doubled bet if applicable
-  handLog.value.unshift(
-    `Hand #${handNumber.value} | Bet: $${displayBet} | Player: ${playerHand} | PlScore: ${playerSc} | Dealer: ${dealerHand} | DeScore: ${dealerSc} | ${resultText} | Bankroll: $${bankroll}`
-  )
+const onLogUpdated = (logEntry: string) => {
+  handLog.value.unshift(logEntry)
+  // You can perform any other actions needed when the log is updated
+}
+
+const onLogReset = () => {
+  handLog.value = []
+  // You can perform any other actions needed when the log is reset
 }
 
 const placeBet = () => {
@@ -369,16 +357,16 @@ const dealInitialHands = () => {
         .concat(dealerHiddenCard.value ? [dealerHiddenCard.value] : [])
         .map((card) => `${card.rank}${card.suit[0]}`)
         .join(' ')
-      updateHandLog(
-        currentBet.value,
-        playerHandString,
+      handLogRef.value?.updateHandLog({
+        bet: currentBet.value,
+        playerHand: playerHandString,
         playerScore,
-        dealerHandString,
+        dealerHand: dealerHandString,
         dealerScore,
-        winner.value === 'tie' ? 'Tie' : 'Player loses',
-        playerMoney.value,
-        winner.value === 'tie' ? 0 : -currentBet.value
-      )
+        result: winner.value === 'tie' ? 'Tie' : 'Player loses',
+        bankroll: playerMoney.value,
+        winAmount: winner.value === 'tie' ? 0 : -currentBet.value,
+      })
       endGame()
       return
     }
@@ -399,16 +387,16 @@ const dealInitialHands = () => {
       .concat(dealerHiddenCard.value ? [dealerHiddenCard.value] : [])
       .map((card) => `${card.rank}${card.suit[0]}`)
       .join(' ')
-    updateHandLog(
-      currentBet.value,
-      playerHandString,
+    handLogRef.value?.updateHandLog({
+      bet: currentBet.value,
+      playerHand: playerHandString,
       playerScore,
-      dealerHandString,
-      calculateHandValue(dealerHand.value),
-      'Player wins',
-      playerMoney.value,
-      winAmount
-    )
+      dealerHand: dealerHandString,
+      dealerScore: calculateHandValue(dealerHand.value),
+      result: 'Player wins',
+      bankroll: playerMoney.value,
+      winAmount,
+    })
     endGame()
   }
 }
@@ -559,7 +547,7 @@ const compareHands = (
 ) => {
   let result = ''
   let winAmount = 0
-  const originalBet = currentBet.value // Store the original bet amount
+  const originalBet = currentBet.value
 
   if (playerScore > 21) {
     result = 'loses'
@@ -589,16 +577,17 @@ const compareHands = (
     .map((card) => `${card.rank}${card.suit[0]}`)
     .join(' ')
 
-  updateHandLog(
-    originalBet,
-    playerHandString,
+  handLogRef.value?.updateHandLog({
+    handNumber: 0, // This will be managed inside HandLog component
+    bet: originalBet,
+    playerHand: playerHandString,
     playerScore,
-    dealerHandString,
+    dealerHand: dealerHandString,
     dealerScore,
     result,
-    Number(playerMoney.value),
-    winAmount
-  )
+    bankroll: Number(playerMoney.value),
+    winAmount,
+  })
 
   if (handIndex === undefined || handIndex === splitHands.value.length - 1) {
     endGame()
@@ -631,7 +620,7 @@ const resetGame = () => {
   currentHand.value = 0
   playerTurn.value = true
   winner.value = null
-  handLog.value = []
+  handLogRef.value?.resetLog()
   initializeDeck()
 }
 
