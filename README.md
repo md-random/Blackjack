@@ -34,7 +34,7 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - 2.5: Added player statistics tracking
 - 2.6: Introduced basic achievement system
 
-## Version 3.0 - 3.5
+## Version 3.0 - 3.6
 
 - 3.0: Refactored to component-based architecture
 - 3.1: Improved dealer blackjack detection and logging
@@ -42,20 +42,23 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - 3.3: Enhanced error handling for split hands and improved win/loss reporting in hand log
 - 3.4: Betting Input set to minimum 0.50 increments
 - 3.5: Refactored bankroll management, enhanced hand logging with hand numbers, and improved code maintainability
+- 3.6: Implemented HandLog component for managing game logs, refactored MainBlackjack.vue to use it, and improved code structure
 
 ## Logic and Function Explanations
 
 ### Core Game Functions
 
 1. `winLoss(result, bet)`: Centralizes bankroll adjustments for wins, losses, ties, and blackjacks.
-2. `updateHandLog(...)`: Logs each hand's details, including a new hand number for easier tracking.
-3. `dealInitialHands()`: Handles the initial deal of cards and checks for blackjacks.
-4. `hit()`: Allows the player to take another card.
-5. `stand()`: Ends the player's turn and initiates the dealer's turn.
-6. `double()`: Doubles the player's bet and deals one more card.
-7. `split()`: Splits a pair into two separate hands.
-8. `checkForBlackjackAfterSplit(hand)`: Checks for blackjack in split hands.
-9. `compareHands(playerScore, dealerScore, handIndex)`: Compares player and dealer hands to determine the winner.
+2. `dealInitialHands()`: Handles the initial deal of cards and checks for blackjacks.
+3. `hit()`: Allows the player to take another card.
+4. `stand()`: Ends the player's turn and initiates the dealer's turn.
+5. `double()`: Doubles the player's bet and deals one more card.
+6. `split()`: Splits a pair into two separate hands.
+7. `checkForBlackjackAfterSplit(hand)`: Checks for blackjack in split hands.
+8. `compareHands(playerScore, dealerScore, handIndex)`: Compares player and dealer hands to determine the winner.
+9. `nextHand()`: Moves to the next split hand.
+10. `endGame()`: Finalizes the game round.
+11. `resetGame()`: Resets the game state for a new round.
 
 ### Helper Functions
 
@@ -69,8 +72,16 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 
 1. `startGame()`: Initializes the game with user-defined settings.
 2. `placeBet()`: Handles the betting process before each hand.
-3. `endGame()`: Concludes the current hand and prepares for the next.
-4. `resetGame()`: Resets the game to its initial state.
+
+### Computed Properties
+
+1. `visibleDealerHand`: Returns the visible cards in the dealer's hand.
+2. `dealerVisibleScore`: Calculates the visible score of the dealer's hand.
+3. `canHit`: Determines if the player can hit.
+4. `canDouble`: Determines if the player can double down.
+5. `canSplit`: Determines if the player can split their hand.
+6. `playerScore`: Calculates the player's hand score.
+7. `dealerScore`: Calculates the dealer's hand score.
 
 ## How to Use
 
