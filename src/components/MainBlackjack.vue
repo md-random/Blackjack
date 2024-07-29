@@ -1,155 +1,57 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 3.7</div>
-    <div class="game-container">
-      <div v-if="!gameStarted" class="game-setup">
-        <h2>Game Setup</h2>
-        <div>
-          <label for="numDecks">Number of Decks (1-6): </label>
-          <input
-            id="numDecks"
-            v-model.number="numberOfDecks"
-            type="number"
-            min="1"
-            max="6"
-          />
-        </div>
-        <div>
-          <label for="startingBankroll"
-            >Starting Bankroll ($100-$100,000):
-          </label>
-          <input
-            id="startingBankroll"
-            v-model.number="startingBankroll"
-            type="number"
-            min="100"
-            max="100000"
-          />
-        </div>
-        <button @click="startGame">Start Game</button>
+    <div class="version">Version 4.0</div>
+    <div class="grid-container">
+      <div class="grid-item grid-item-1"></div>
+      <div class="grid-item grid-item-2">
+        <Hand
+          :cards="visibleDealerHand"
+          :player="`Dealer: ${dealerVisibleScore}`"
+          :isActive="!playerTurn"
+          :isWinner="winner === 'dealer'"
+          class="hand dealer-hand"
+        />
       </div>
-
-      <template v-else>
-        <div class="top-row">
-          <!-- Box 5: Count Info -->
-          <div class="box count-info">
-            <div>
-              <CardCounting
-                :cardsLeft="deck.length"
-                :runningCount="runningCount"
-              />
-            </div>
-
-            <div class="aggression-meter">
-              <div class="meter">
-                <div
-                  class="meter-bar"
-                  :class="aggressionMeterClass"
-                  :style="{ width: `${Math.abs(trueCount) * 20}%` }"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Box 1: Game Info and Betting -->
-          <div class="box game-info">
-            <h1>Blackjack</h1>
-            <p>Player Money: ${{ playerMoney }}</p>
-            <p>Current Bet: ${{ currentBet }}</p>
-            <div v-if="!handInProgress && !playerBroke">
-              <p>Place your bet ($0.50 - ${{ playerMoney }})</p>
-              <input
-                v-model.number="betAmount"
-                type="number"
-                :min="0.5"
-                :max="playerMoney"
-                step="0.50"
-                @input="validateBet"
-              />
-              <button @click="placeBet">Place Bet</button>
-            </div>
-          </div>
-
-          <!-- Box 6: Hand Log -->
-          <!-- Box 6: Hand Log -->
-          <HandLog :logs="handLog" />
+      <div class="grid-item grid-item-3"></div>
+      <div class="grid-item grid-item-4">
+        <CardCounting :cardsLeft="deck.length" :runningCount="runningCount" />
+      </div>
+      <div class="grid-item grid-item-5">
+        <div class="game-info">
+          <h2>Blackjack</h2>
+          <p>Money: ${{ playerMoney }}</p>
+          <p>Bet: ${{ currentBet }}</p>
         </div>
-
-        <div class="middle-row">
-          <!-- Box 2: Player's Hand -->
-          <div class="box player-hand">
-            <template v-if="splitHands.length === 0">
-              <Hand
-                :cards="playerHand"
-                :player="`Player's Hand: ${playerScore}`"
-                :isActive="playerTurn"
-                :isWinner="winner === 'player'"
-              />
-            </template>
-            <template v-else>
-              <div v-for="(hand, index) in splitHands" :key="index">
-                <Hand
-                  :cards="hand"
-                  :player="`Player's Hand ${index + 1}: ${calculateHandValue(
-                    hand
-                  )}`"
-                  :isActive="playerTurn && currentHand === index"
-                  :isWinner="winner === 'player'"
-                />
-                <p v-if="index === currentHand && !gameOver">
-                  Currently playing this hand
-                </p>
-              </div>
-            </template>
-          </div>
-
-          <!-- Box 3: Dealer's Hand -->
-          <div class="box dealer-hand">
-            <Hand
-              :cards="visibleDealerHand"
-              :player="`Dealer's Hand: ${dealerVisibleScore}`"
-              :isActive="!playerTurn"
-              :isWinner="winner === 'dealer'"
-            />
-          </div>
-        </div>
-
-        <!-- Box 4: Game Actions and Messages -->
-        <div class="box game-actions">
-          <p>{{ message }}</p>
-          <BettingInterface
-            :playerMoney="playerMoney"
-            :handInProgress="handInProgress"
-            :playerBroke="playerBroke"
-            :canHit="canHit"
-            :canDouble="canDouble"
-            :canSplit="canSplit"
-            @placeBet="placeBet"
-            @hit="hit"
-            @stand="stand"
-            @double="double"
-            @split="split"
-            @updateBetAmount="updateBetAmount"
-          />
-
-          <!-- Display wins/losses -->
-          <div v-if="gameOver" class="result">
-            <p v-if="playerWinnings > 0" class="win">
-              Player wins ${{ playerWinnings }}
-            </p>
-            <p v-else-if="playerWinnings < 0" class="loss">
-              Player loses ${{ -playerWinnings }}
-            </p>
-            <p v-else>It's a tie!</p>
-          </div>
-
-          <!-- Display message and button if player is broke -->
-          <div v-if="playerBroke" class="result">
-            <p class="loss">You are broke!</p>
-            <button @click="resetGame">Restart Game</button>
-          </div>
-        </div>
-      </template>
+        <BettingInterface
+          :playerMoney="playerMoney"
+          :handInProgress="handInProgress"
+          :playerBroke="playerBroke"
+          :canHit="canHit"
+          :canDouble="canDouble"
+          :canSplit="canSplit"
+          @placeBet="placeBet"
+          @hit="hit"
+          @stand="stand"
+          @double="double"
+          @split="split"
+          @updateBetAmount="updateBetAmount"
+        />
+        <p class="message">{{ message }}</p>
+      </div>
+      <div class="grid-item grid-item-6">
+        <HandLog :logs="handLog" />
+      </div>
+      <div class="grid-item grid-item-7"></div>
+      <div class="grid-item grid-item-8">
+        <Hand
+          :cards="playerHand"
+          :player="`Player: ${playerScore}`"
+          :isActive="playerTurn"
+          :isWinner="winner === 'player'"
+          class="hand player-hand"
+        />
+      </div>
+      <div class="grid-item grid-item-9"></div>
     </div>
   </div>
 </template>
@@ -773,190 +675,133 @@ initializeDeck()
 <style scoped>
 .blackjack {
   font-family: Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 98vw;
+  height: 98vh;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background-color: #2c7a2c; /* Green felt background */
+  background-color: #2c7a2c;
   color: #ffffff;
+  overflow: hidden;
 }
 
 .version {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 15px;
+  right: 45px;
   font-size: 14px;
-  color: #4169e1; /* Royal Blue */
+  color: ##ffffff;
   font-weight: bold;
 }
 
-.game-container {
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.grid-item {
+  padding: 10px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.grid-item-1,
+.grid-item-3,
+.grid-item-7,
+.grid-item-9 {
+  background-color: transparent;
+}
+
+.game-info {
+  text-align: center;
+}
+
+.game-info h2 {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+}
+
+.game-info p {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.hand-log {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  font-size: 0.8em;
+}
+
+.message {
+  margin-top: 10px;
+  font-weight: bold;
+  text-align: center;
+  font-size: 0.9em;
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   height: 100%;
 }
 
-.top-row {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.middle-row {
-  display: flex;
-  justify-content: space-around;
-  width: 100%;
-  margin: 20px 0;
-}
-
-.box {
-  padding: 20px;
-  margin: 10px;
-  border-radius: 10px;
-}
-
-.count-info,
-.game-info,
-.hand-log {
-  flex: 1;
-  max-width: 40%;
-}
-
-.player-hand,
-.dealer-hand {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.game-actions {
-  width: 100%;
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.action-buttons button {
-  padding: 10px 20px;
-  font-size: 16px;
-  margin: 5px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.action-buttons button:hover {
-  background-color: #2980b9;
-}
-
-.action-buttons button:disabled {
-  background-color: #95a5a6;
-  cursor: not-allowed;
-}
-
-.result {
-  font-weight: bold;
-  margin-top: 10px;
-}
-
-.win {
-  color: #2ecc71;
-}
-
-.loss {
-  color: #e74c3c;
-}
-
-.hand-log {
-  max-height: 300px;
-  overflow-y: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.hand-log ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.hand-log li {
-  margin-bottom: 5px;
+.hand :deep(.card) {
+  width: 80px; /* Set a fixed width for cards */
+  height: 120px; /* Set a fixed height for cards */
+  margin: 5px; /* Adjust margin for spacing */
 }
 
 @media (max-width: 1024px) {
-  .top-row,
-  .middle-row {
-    flex-direction: column;
-    align-items: center;
+  .grid-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, auto);
+    height: auto;
+    aspect-ratio: auto;
   }
 
-  .count-info,
-  .game-info,
-  .hand-log {
-    max-width: 90%;
+  .grid-item-1,
+  .grid-item-3,
+  .grid-item-7,
+  .grid-item-9 {
+    display: none;
   }
-}
 
-.count-info-text {
-  font-size: 18px;
-  padding: 40px;
-}
+  .grid-item-2 {
+    order: 1;
+  }
+  .grid-item-8 {
+    order: 2;
+  }
+  .grid-item-5 {
+    order: 3;
+  }
+  .grid-item-4 {
+    order: 4;
+  }
+  .grid-item-6 {
+    order: 5;
+  }
 
-@media (max-width: 576px) {
-  .box {
+  .grid-item {
     padding: 10px;
+    margin-bottom: 10px;
   }
-
-  .action-buttons button {
-    padding: 8px 16px;
-    font-size: 14px;
-  }
-}
-
-.game-setup {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-.game-setup h2 {
-  margin-bottom: 20px;
-}
-
-.game-setup div {
-  margin-bottom: 10px;
-}
-
-.game-setup input {
-  margin-left: 10px;
-}
-
-.game-setup button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.game-setup button:hover {
-  background-color: #2980b9;
 }
 </style>

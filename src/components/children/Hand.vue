@@ -7,7 +7,7 @@
       winner: isWinner,
     }"
   >
-    <h2>{{ player }}</h2>
+    <h2 class="score-label">{{ player }}</h2>
     <div class="cards-container">
       <div
         v-for="(card, index) in visibleCards"
@@ -73,6 +73,7 @@ const getSuitSymbol = (suit: string) => {
   width: 100%;
   padding: 10px;
   margin-bottom: 10px;
+  flex-direction: column-reverse;
 }
 
 .cards-container {
