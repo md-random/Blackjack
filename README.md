@@ -45,6 +45,10 @@ This is a Vue 3 component that implements a Blackjack game. It features a respon
 - 3.6: Implemented HandLog component for managing game logs, refactored MainBlackjack.vue to use it, and improved code structure
 - 3.7: Implemented incremental handNumber, refactored hand logging, and integrated BettingInterface component
 
+## Version 4.0
+
+- 4.0: Major UI overhaul, card display improvements, and implementation of grid system
+
 ## Logic and Function Explanations
 
 ### Core Game Functions
