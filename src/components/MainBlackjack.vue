@@ -1,6 +1,6 @@
 <template>
   <div class="blackjack">
-    <div class="version">Version 3.6</div>
+    <div class="version">Version 3.7</div>
     <div class="game-container">
       <div v-if="!gameStarted" class="game-setup">
         <h2>Game Setup</h2>
@@ -72,11 +72,7 @@
 
           <!-- Box 6: Hand Log -->
           <!-- Box 6: Hand Log -->
-          <HandLog
-            ref="handLogRef"
-            @logUpdated="onLogUpdated"
-            @logReset="onLogReset"
-          />
+          <HandLog :logs="handLog" />
         </div>
 
         <div class="middle-row">
@@ -121,12 +117,20 @@
         <!-- Box 4: Game Actions and Messages -->
         <div class="box game-actions">
           <p>{{ message }}</p>
-          <div class="action-buttons">
-            <button @click="hit" :disabled="!canHit">Hit</button>
-            <button @click="stand" :disabled="!canHit">Stand</button>
-            <button @click="double" :disabled="!canDouble">Double</button>
-            <button @click="split" :disabled="!canSplit">Split</button>
-          </div>
+          <BettingInterface
+            :playerMoney="playerMoney"
+            :handInProgress="handInProgress"
+            :playerBroke="playerBroke"
+            :canHit="canHit"
+            :canDouble="canDouble"
+            :canSplit="canSplit"
+            @placeBet="placeBet"
+            @hit="hit"
+            @stand="stand"
+            @double="double"
+            @split="split"
+            @updateBetAmount="updateBetAmount"
+          />
 
           <!-- Display wins/losses -->
           <div v-if="gameOver" class="result">
@@ -155,10 +159,23 @@ import { ref, computed, onUpdated, Ref, nextTick } from 'vue'
 import Hand from './children/Hand.vue'
 import HandLog from './children/HandLog.vue'
 import CardCounting from './children/CardCounting.vue'
+import BettingInterface from './children/BettingInterface.vue'
 
 interface Card {
   suit: string
   rank: string
+}
+
+interface HandLogEntry {
+  handNumber: number
+  bet: number
+  playerHand: string
+  playerScore: number
+  dealerHand: string
+  dealerScore: number
+  result: string
+  bankroll: number
+  winAmount: number
 }
 
 const deck = ref<Card[]>([])
@@ -184,6 +201,10 @@ const runningCount = ref(0)
 const handLog = ref<string[]>([])
 const handLogRef = ref<InstanceType<typeof HandLog> | null>(null)
 const handNumber = ref(0)
+
+const updateBetAmount = (amount: number) => {
+  betAmount.value = amount
+}
 
 const trueCount = computed(() => {
   const decksRemaining = Math.ceil(deck.value.length / 52)
@@ -349,7 +370,8 @@ const dealInitialHands = () => {
         winLoss('loss', currentBet.value)
         winner.value = 'dealer'
       }
-      // Create hand log for this hand
+      // Increment handNumber and create hand log for this hand
+      handNumber.value++
       const playerHandString = playerHand.value
         .map((card) => `${card.rank}${card.suit[0]}`)
         .join(' ')
@@ -357,7 +379,8 @@ const dealInitialHands = () => {
         .concat(dealerHiddenCard.value ? [dealerHiddenCard.value] : [])
         .map((card) => `${card.rank}${card.suit[0]}`)
         .join(' ')
-      handLogRef.value?.updateHandLog({
+      updateHandLog({
+        handNumber: handNumber.value,
         bet: currentBet.value,
         playerHand: playerHandString,
         playerScore,
@@ -379,7 +402,8 @@ const dealInitialHands = () => {
     const blackjackPayout = currentBet.value * 1.5
     const winAmount = winLoss('blackjack', currentBet.value)
     winner.value = 'player'
-    // Create hand log for this hand
+    // Increment handNumber and create hand log for this hand
+    handNumber.value++
     const playerHandString = playerHand.value
       .map((card) => `${card.rank}${card.suit[0]}`)
       .join(' ')
@@ -387,7 +411,8 @@ const dealInitialHands = () => {
       .concat(dealerHiddenCard.value ? [dealerHiddenCard.value] : [])
       .map((card) => `${card.rank}${card.suit[0]}`)
       .join(' ')
-    handLogRef.value?.updateHandLog({
+    updateHandLog({
+      handNumber: handNumber.value,
       bet: currentBet.value,
       playerHand: playerHandString,
       playerScore,
@@ -399,6 +424,17 @@ const dealInitialHands = () => {
     })
     endGame()
   }
+}
+
+const updateHandLog = (entry: HandLogEntry) => {
+  const resultText =
+    entry.result === 'Tie'
+      ? 'Tie'
+      : `Player ${entry.result} $${Math.abs(entry.winAmount).toFixed(2)}`
+  const displayBet = currentBet.value > entry.bet ? entry.bet * 2 : entry.bet // Display doubled bet if applicable
+  handLog.value.unshift(
+    `Hand #${entry.handNumber} | Bet: $${displayBet} | Player: ${entry.playerHand} | PlScore: ${entry.playerScore} | Dealer: ${entry.dealerHand} | DeScore: ${entry.dealerScore} | ${resultText} | Bankroll: $${entry.bankroll}`
+  )
 }
 
 const winLoss = (result: 'win' | 'loss' | 'tie' | 'blackjack', bet: number) => {
@@ -547,7 +583,7 @@ const compareHands = (
 ) => {
   let result = ''
   let winAmount = 0
-  const originalBet = currentBet.value
+  const originalBet = currentBet.value // Store the original bet amount
 
   if (playerScore > 21) {
     result = 'loses'
@@ -577,8 +613,10 @@ const compareHands = (
     .map((card) => `${card.rank}${card.suit[0]}`)
     .join(' ')
 
-  handLogRef.value?.updateHandLog({
-    handNumber: 0, // This will be managed inside HandLog component
+  // Increment handNumber and create hand log for this hand
+  handNumber.value++
+  updateHandLog({
+    handNumber: handNumber.value,
     bet: originalBet,
     playerHand: playerHandString,
     playerScore,
@@ -620,7 +658,8 @@ const resetGame = () => {
   currentHand.value = 0
   playerTurn.value = true
   winner.value = null
-  handLogRef.value?.resetLog()
+  handLog.value = []
+  handNumber.value = 0 // Reset handNumber
   initializeDeck()
 }
 
